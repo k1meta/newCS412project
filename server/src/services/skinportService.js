@@ -1,14 +1,16 @@
 const axios = require('axios');
 
 const SKINPORT_API_BASE = 'https://api.skinport.com/v1';
-const API_KEY = process.env.SKINPORT_API_KEY;
+const SKINPORT_CLIENT_ID = process.env.SKINPORT_CLIENT_ID;
+const SKINPORT_CLIENT_SECRET = process.env.SKINPORT_CLIENT_SECRET;
 
-// Create axios instance for Skinport
+// Create axios instance for Skinport with Basic Auth
 const skinportApi = axios.create({
   baseURL: SKINPORT_API_BASE,
-  headers: {
-    'Authorization': API_KEY ? `Bearer ${API_KEY}` : ''
-  }
+  auth: SKINPORT_CLIENT_ID && SKINPORT_CLIENT_SECRET ? {
+    username: SKINPORT_CLIENT_ID,
+    password: SKINPORT_CLIENT_SECRET
+  } : undefined
 });
 
 // Get listings from Skinport
