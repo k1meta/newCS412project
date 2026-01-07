@@ -4,8 +4,12 @@ const bitskinsService = require('./bitskinsService');
 
 // Search all marketplaces and aggregate results
 const searchAllMarketplaces = async (filters = {}, forceRefresh = false) => {
+  console.log('Aggregator: Starting search with filters:', JSON.stringify(filters));
+  
   try {
     // Fetch from all marketplaces in parallel
+    console.log('Aggregator: Fetching from all marketplaces...');
+    
     const [csfloatItems, skinportItems, bitskinsItems] = await Promise.all([
       csfloatService.getListings(filters).catch(err => {
         console.error('CSFloat fetch error:', err.message);
@@ -21,6 +25,8 @@ const searchAllMarketplaces = async (filters = {}, forceRefresh = false) => {
       })
     ]);
 
+    console.log(`Aggregator: CSFloat=${csfloatItems.length}, Skinport=${skinportItems.length}, Bitskins=${bitskinsItems.length}`);
+
     // Combine all items
     const allItems = [
       ...csfloatItems,
@@ -28,6 +34,7 @@ const searchAllMarketplaces = async (filters = {}, forceRefresh = false) => {
       ...bitskinsItems
     ];
 
+    console.log(`Aggregator: Total items = ${allItems.length}`);
     return allItems;
   } catch (err) {
     console.error('Aggregator error:', err.message);

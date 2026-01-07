@@ -7,22 +7,28 @@ const API_KEY = process.env.BITSKINS_API_KEY;
 const bitskinsApi = axios.create({
   baseURL: BITSKINS_API_BASE,
   headers: {
-    'x-apikey': API_KEY || ''
+    'x-apikey': API_KEY || '',
+    'Content-Type': 'application/json'
   }
 });
 
 // Get listings from Bitskins
 const getListings = async (filters = {}) => {
   try {
+    // If no search term or no API key, return empty
+    if (!filters.search || !API_KEY) {
+      if (!API_KEY) {
+        console.log('Bitskins: No API key configured');
+      }
+      return [];
+    }
+
     const requestBody = {
       limit: 100,
-      offset: 0
+      offset: 0,
+      market_hash_name: filters.search // Use market_hash_name instead of skin_name
     };
 
-    // Map filters to Bitskins API parameters
-    if (filters.search) {
-      requestBody.skin_name = filters.search;
-    }
     if (filters.minPrice) {
       requestBody.price_from = filters.minPrice / 100; // Convert cents to dollars
     }
@@ -64,7 +70,7 @@ const getListings = async (filters = {}) => {
     
     return items;
   } catch (err) {
-    console.error('Bitskins API error:', err.message);
+    console.error('Bitskins API error:', err.response?.data || err.message);
     return [];
   }
 };

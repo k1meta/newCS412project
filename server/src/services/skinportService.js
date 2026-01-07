@@ -1,40 +1,49 @@
 const axios = require('axios');
 
 const SKINPORT_API_BASE = 'https://api.skinport.com/v1';
-const API_KEY = process.env.SKINPORT_API_KEY;
+const CLIENT_ID = process.env.SKINPORT_CLIENT_ID;
+const CLIENT_SECRET = process.env.SKINPORT_CLIENT_SECRET;
 
 // Create axios instance for Skinport
 const skinportApi = axios.create({
   baseURL: SKINPORT_API_BASE,
-  headers: {
-    'Authorization': API_KEY ? `Bearer ${API_KEY}` : ''
-  }
+  auth: CLIENT_ID && CLIENT_SECRET ? {
+    username: CLIENT_ID,
+    password: CLIENT_SECRET
+  } : undefined
 });
 
 // Get listings from Skinport
 const getListings = async (filters = {}) => {
   try {
+    // If no search term, return empty (don't fetch all items)
+    if (!filters.search) {
+      return [];
+    }
+
     const params = {
       app_id: 730, // CS2
       currency: 'USD'
     };
 
-    // Skinport uses different parameter names
-    if (filters.search) {
-      params.search = filters.search;
-    }
-
     const response = await skinportApi.get('/items', { params });
     
-    // Normalize data to common format
-    let items = (response.data.items || response.data || []).map(normalizeItem);
+    // Skinport returns all items, we need to filter locally by search term
+    let items = (response.data || []).map(normalizeItem);
     
-    // Apply filters
+    // Filter by search term (case-insensitive partial match)
+    const searchLower = filters.search.toLowerCase();
+    items = items.filter(item => 
+      item.market_hash_name?.toLowerCase().includes(searchLower) ||
+      item.item_name?.toLowerCase().includes(searchLower)
+    );
+    
+    // Apply other filters
     items = applyLocalFilters(items, filters);
     
     return items;
   } catch (err) {
-    console.error('Skinport API error:', err.message);
+    console.error('Skinport API error:', err.response?.data || err.message);
     return [];
   }
 };

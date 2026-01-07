@@ -4,7 +4,7 @@
 -- Watchlist table - stores user's saved items
 CREATE TABLE IF NOT EXISTS watchlist (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_token UUID NOT NULL,
+    user_token TEXT NOT NULL,
     marketplace VARCHAR(20) NOT NULL,
     listing_id VARCHAR(100) NOT NULL,
     market_hash_name VARCHAR(255) NOT NULL,

@@ -1,15 +1,17 @@
-const RefreshButton = ({ onClick, loading }) => {
+const RefreshButton = ({ onClick, loading, disabled }) => {
+  const isDisabled = loading || disabled;
+  
   return (
     <button
       onClick={onClick}
-      disabled={loading}
+      disabled={isDisabled}
       className={`p-2 rounded-lg border border-gray-600 
                   transition-all duration-200
-                  ${loading 
-                    ? 'bg-gray-700 cursor-not-allowed' 
+                  ${isDisabled 
+                    ? 'bg-gray-700 cursor-not-allowed opacity-50' 
                     : 'bg-cs-dark hover:border-cs-accent hover:text-cs-accent'
                   }`}
-      title="Refresh items"
+      title={disabled ? "Search for items first" : "Refresh items"}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

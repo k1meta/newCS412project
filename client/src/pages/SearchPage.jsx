@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import FilterSidebar from '../components/filters/FilterSidebar';
 import SortDropdown from '../components/filters/SortDropdown';
 import ItemGrid from '../components/items/ItemGrid';
@@ -25,11 +25,19 @@ const SearchPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Fetch items
   const fetchItems = useCallback(async (isRefresh = false) => {
+    // Require a search term before fetching
+    if (!filters.search || filters.search.trim().length < 2) {
+      setError('Please enter at least 2 characters to search');
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setHasSearched(true);
 
     try {
       const params = {
@@ -59,11 +67,6 @@ const SearchPage = () => {
     }
   }, [filters, sortBy]);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
   // Handle filter change and search
   const handleSearch = () => {
     fetchItems();
@@ -77,8 +80,10 @@ const SearchPage = () => {
   // Handle sort change
   const handleSortChange = (newSort) => {
     setSortBy(newSort);
-    // Re-fetch with new sort
-    setTimeout(() => fetchItems(), 0);
+    // Only re-fetch if we've already searched
+    if (hasSearched && filters.search) {
+      setTimeout(() => fetchItems(), 0);
+    }
   };
 
   return (
@@ -99,12 +104,12 @@ const SearchPage = () => {
           <div>
             <h1 className="text-2xl font-bold text-white">Search Skins</h1>
             <p className="text-gray-400 text-sm mt-1">
-              {items.length} items found
+              {hasSearched ? `${items.length} items found` : 'Enter a skin name to search'}
             </p>
           </div>
 
           <div className="flex items-center gap-4">
-            <RefreshButton onClick={handleRefresh} loading={loading} />
+            <RefreshButton onClick={handleRefresh} loading={loading} disabled={!hasSearched} />
             <SortDropdown selected={sortBy} onChange={handleSortChange} />
           </div>
         </div>
@@ -116,12 +121,41 @@ const SearchPage = () => {
           </div>
         )}
 
-        {/* Items grid */}
-        <ItemGrid
-          items={items}
-          loading={loading}
-          emptyMessage="No skins found. Try adjusting your filters or click refresh."
-        />
+        {/* Welcome message when no search yet */}
+        {!hasSearched && !loading && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-16 w-16 text-gray-500 mb-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <h2 className="text-xl font-semibold text-white mb-2">
+              Search for CS2 Skins
+            </h2>
+            <p className="text-gray-400 max-w-md">
+              Enter an item name in the search bar to find prices across CSFloat, Skinport, and Bitskins.
+              Try searching for "AK-47 Redline" or "Karambit Doppler".
+            </p>
+          </div>
+        )}
+
+        {/* Items grid - only show after search */}
+        {hasSearched && (
+          <ItemGrid
+            items={items}
+            loading={loading}
+            emptyMessage="No skins found. Try adjusting your filters or search term."
+          />
+        )}
       </main>
     </div>
   );

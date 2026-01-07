@@ -3,6 +3,15 @@ const axios = require('axios');
 const CSFLOAT_API_BASE = 'https://csfloat.com/api/v1';
 const API_KEY = process.env.CSFLOAT_API_KEY;
 
+// All possible exterior conditions
+const EXTERIORS = [
+  'Factory New',
+  'Minimal Wear', 
+  'Field-Tested',
+  'Well-Worn',
+  'Battle-Scarred'
+];
+
 // Create axios instance for CSFloat
 const csfloatApi = axios.create({
   baseURL: CSFLOAT_API_BASE,
@@ -14,14 +23,53 @@ const csfloatApi = axios.create({
 // Get listings from CSFloat
 const getListings = async (filters = {}) => {
   try {
-    const params = {};
-
-    // Map filters to CSFloat API parameters
-    if (filters.search) {
-      params.market_hash_name = filters.search;
+    // If no search term, return empty (don't fetch all items)
+    if (!filters.search) {
+      return [];
     }
+
+    // CSFloat requires exact market_hash_name with exterior
+    // We need to search for all exterior variations
+    const baseItemName = filters.search.trim();
+    
+    // Check if search already includes an exterior
+    const hasExterior = EXTERIORS.some(ext => 
+      baseItemName.toLowerCase().includes(ext.toLowerCase())
+    );
+
+    let allItems = [];
+
+    if (hasExterior) {
+      // Search with exact name provided
+      const items = await fetchListings(baseItemName, filters);
+      allItems = items;
+    } else {
+      // Search all 5 exterior variations in parallel
+      const searchPromises = EXTERIORS.map(exterior => 
+        fetchListings(`${baseItemName} (${exterior})`, filters)
+      );
+      
+      const results = await Promise.all(searchPromises);
+      allItems = results.flat();
+    }
+    
+    return applyLocalFilters(allItems, filters);
+  } catch (err) {
+    console.error('CSFloat API error:', err.message);
+    return [];
+  }
+};
+
+// Fetch listings for a specific market_hash_name
+const fetchListings = async (marketHashName, filters) => {
+  try {
+    const params = {
+      market_hash_name: marketHashName,
+      limit: 50
+    };
+
     if (filters.minPrice) {
-      params.min_price = filters.minPrice; // CSFloat uses cents
+      params.min_price = filters.minPrice;
     }
     if (filters.maxPrice) {
       params.max_price = filters.maxPrice;
@@ -34,14 +82,9 @@ const getListings = async (filters = {}) => {
     }
 
     const response = await csfloatApi.get('/listings', { params });
-    
-    // Normalize data to common format
-    const items = (response.data.data || response.data || []).map(normalizeItem);
-    
-    return applyLocalFilters(items, filters);
+    return (response.data.data || response.data || []).map(normalizeItem);
   } catch (err) {
-    console.error('CSFloat API error:', err.message);
-    // Return empty array if API fails (no mock data as requested)
+    // Silently fail for individual searches (item might not exist in that condition)
     return [];
   }
 };
